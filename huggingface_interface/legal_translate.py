@@ -2,9 +2,8 @@
 import sys
 import torch
 from transformers import AutoModelForSeq2SeqLM, BitsAndBytesConfig
-from IndicTransTokenizer import  IndicTransTokenizer
-from IndicTransTokenizer.utils import preprocess_batch, postprocess_batch
-from IndicTransTokenizer.tokenizer import IndicTransTokenizer
+from IndicTransTokenizer import IndicProcessor, IndicTransTokenizer
+
 import re
 
 indic_indic_ckpt_dir = "ai4bharat/indictrans2-en-indic-dist-200M" #"ai4bharat/indictrans2-indic-indic-1B"  
@@ -40,26 +39,25 @@ def initialize_model_and_tokenizer(ckpt_dir, direction, quantization):
         ckpt_dir,
         trust_remote_code=True,
         low_cpu_mem_usage=True,
-        quantization_config=qconfig
+        quantization_config=qconfig,
     )
-    
-    if qconfig==None:
+
+    if qconfig == None:
         model = model.to(DEVICE)
-        # model.half()
-    
+        model.half()
+
     model.eval()
-    
+
     return tokenizer, model
 
 
-def batch_translate(input_sentences, src_lang, tgt_lang, model, tokenizer):
+def batch_translate(input_sentences, src_lang, tgt_lang, model, tokenizer, ip):
     translations = []
     for i in range(0, len(input_sentences), BATCH_SIZE):
         batch = input_sentences[i : i + BATCH_SIZE]
+
         # Preprocess the batch and extract entity mappings
-        batch, entity_map = preprocess_batch(
-            batch, src_lang=src_lang, tgt_lang=tgt_lang
-        )
+        batch = ip.preprocess_batch(batch, src_lang=src_lang, tgt_lang=tgt_lang)
 
         # Tokenize the batch and generate input encodings
         inputs = tokenizer(
@@ -83,19 +81,17 @@ def batch_translate(input_sentences, src_lang, tgt_lang, model, tokenizer):
             )
 
         # Decode the generated tokens into text
-        generated_tokens = tokenizer.batch_decode(
-            generated_tokens.detach().cpu().tolist(), src=False
-        )
+        generated_tokens = tokenizer.batch_decode(generated_tokens.detach().cpu().tolist(), src=False)
 
         # Postprocess the translations, including entity replacement
-        translations += postprocess_batch(
-            generated_tokens, lang=tgt_lang, placeholder_entity_map=entity_map
-        )
+        translations += ip.postprocess_batch(generated_tokens, lang=tgt_lang)
 
         del inputs
         torch.cuda.empty_cache()
 
     return translations
+
+ip = IndicProcessor(inference=True)
 
 src_lang, tgt_lang = "eng_Latn", "tam_Taml"
 
@@ -111,11 +107,11 @@ indic_en_tokenizer, indic_en_model = initialize_model_and_tokenizer(
 def translate(item: str, reverse=False):
     if (reverse):
         translated = batch_translate(
-            re.split(r'\.|\n', item), tgt_lang, src_lang, indic_en_model, indic_en_tokenizer
+            re.split(r'\.|\n', item), tgt_lang, src_lang, indic_en_model, indic_en_tokenizer, ip
         )
         return "\n".join(translated)
     translated = batch_translate(
-        re.split(r'\.|\n', item), src_lang, tgt_lang, indic_indic_model, indic_indic_tokenizer
+        re.split(r'\.|\n', item), src_lang, tgt_lang, indic_indic_model, indic_indic_tokenizer, ip
     )
     return "\n".join(translated)
 
