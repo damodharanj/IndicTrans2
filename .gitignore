@@ -146,3 +146,9 @@ dmypy.json
 cython_debug/
 
 .DS_Store
+experiment/
+tempDir
+english
+legal.out
+*.txt
+secrets.toml
