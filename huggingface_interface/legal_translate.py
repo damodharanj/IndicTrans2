@@ -44,7 +44,7 @@ def initialize_model_and_tokenizer(ckpt_dir, direction, quantization):
 
     if qconfig == None:
         model = model.to(DEVICE)
-        model.half()
+        # model.half()
 
     model.eval()
 

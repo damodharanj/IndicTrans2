@@ -38,10 +38,12 @@ Standalone question:"""
 CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(_template)
 
 template = """
-* List the most important top 5 points that are in the context
-{context}
-
+Answer the question using the provided context with 5 important points
 Question: {question}
+
+Context: {context}
+
+Answer: 
 """
 ANSWER_PROMPT = ChatPromptTemplate.from_template(template)
 
@@ -154,14 +156,15 @@ if prompt_str and chain:
             "question": translated,
             "chat_history": [],
         }
-    ).content    
-    
+    ).content
+    print('\n\n\n', msg1)
     with st.chat_message("assistant"):
         messages = []
         for i in re.split(r'\n', msg1):
-            t = translate(i)
-            messages.append(t)
-            st.write(t)
+            if not i == '' or i == '\n':
+                t = translate(i.strip().replace('4.', '').replace('5.', ''))
+                messages.append(t.replace('. ', ''))
+                st.write(t)
         st.session_state.messages.append({"role": "assistant", "content": "\n".join(messages)})
         
         
