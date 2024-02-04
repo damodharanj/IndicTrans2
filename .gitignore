@@ -152,3 +152,5 @@ english
 legal.out
 *.txt
 secrets.toml
+ponni/
+*.pdf
