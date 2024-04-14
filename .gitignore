@@ -154,3 +154,4 @@ legal.out
 secrets.toml
 ponni/
 *.pdf
+!huggingface_interface/html_output.txt
